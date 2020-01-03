@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "declaration": true,
+        "target": "es2017",
+        "module": "commonjs",
+        "outDir": "./lib",
+        "esModuleInterop": true,
+        "experimentalDecorators": true
+    },
+    "include": [
+        "src"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
