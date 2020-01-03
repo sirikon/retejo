@@ -1,8 +1,9 @@
-import Koa, { BaseContext } from 'koa';
+import Koa from 'koa';
 import KoaRouter from 'koa-router';
 import { container, InjectionToken } from 'tsyringe';
 import { v4 } from 'uuid';
 
+import { Logger } from './Logger';
 import { IRetejoContext, JobContext, RetejoContext } from './models';
 
 export class App {
@@ -11,15 +12,8 @@ export class App {
 
 	constructor() {
 		this.koa = new Koa<any, IRetejoContext>();
-
-		this.koa.use(async (ctx, next) => {
-			const jobCtx = new JobContext(v4());
-			const requestContainer = container.createChildContainer();
-			requestContainer.register(JobContext, { useValue: jobCtx });
-			ctx.ioc = requestContainer;
-			await next();
-		});
-
+		this.useInit();
+		this.useErrorHandling();
 	}
 
 	// tslint:disable-next-line: max-line-length
@@ -30,9 +24,30 @@ export class App {
 	}
 
 	public listen(host: string, port: number) {
+		const logger = getLogger();
 		this.koa.listen(port, host, () => {
-			// tslint:disable-next-line: no-console
-			console.log('Listening...');
+			logger.info('App started', { host, port });
+		});
+	}
+
+	private useInit() {
+		this.koa.use(async (ctx, next) => {
+			const jobCtx = new JobContext(v4());
+			const requestContainer = container.createChildContainer();
+			requestContainer.register(JobContext, { useValue: jobCtx });
+			ctx.ioc = requestContainer;
+			await next();
+		});
+	}
+
+	private useErrorHandling() {
+		this.koa.use(async (ctx, next) => {
+			try {
+				await next();
+			} catch (err) {
+				ctx.status = 500;
+				ctx.body = err.stack || err;
+			}
 		});
 	}
 }
@@ -43,4 +58,10 @@ function controllerResolver<T>(type: InjectionToken<T>, callback: (c: T) => ((ct
 		const controller = ctx.ioc.resolve(type);
 		await callback(controller).call(controller, ctx);
 	};
+}
+
+function getLogger(): Logger {
+	const childContainer = container.createChildContainer();
+	childContainer.register(JobContext, { useValue: new JobContext('app-start') });
+	return childContainer.resolve(Logger);
 }

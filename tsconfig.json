@@ -6,7 +6,8 @@
         "module": "commonjs",
         "outDir": "./lib",
         "esModuleInterop": true,
-        "experimentalDecorators": true
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true
     },
     "include": [
         "src"
