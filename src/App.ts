@@ -6,6 +6,17 @@ import { v4 } from 'uuid';
 import { Logger } from './Logger';
 import { IRetejoContext, JobContext, RetejoContext } from './models';
 
+type CRouter = KoaRouter<any, IRetejoContext>;
+type CMiddleware = KoaRouter.IMiddleware<any, IRetejoContext>;
+
+type RootRoutingCallback = (route: CRouter, nest: NestRouting, controller: ControllerHandlerResolver) => void;
+type NestRouting = (prefix: string, route: CRouter, cb: NestRoutingCallback) => void;
+type NestRoutingCallback = (router: CRouter) => void;
+
+type Handler = (ctx: RetejoContext) => Promise<void>;
+type HandlerResolver<T> = (controller: T) => Handler;
+type ControllerHandlerResolver = <T>(type: InjectionToken<T>, handlerResolver: HandlerResolver<T>) => Handler;
+
 export class App {
 
 	private koa: Koa<any, IRetejoContext>;
@@ -17,10 +28,12 @@ export class App {
 	}
 
 	// tslint:disable-next-line: max-line-length
-	public route(cb: (r: KoaRouter<any, IRetejoContext>, c: <T>(type: InjectionToken<T>, callback: (c: T) => ((ctx: RetejoContext) => Promise<void>)) => (ctx: RetejoContext) => Promise<void>) => void) {
-		const r = new KoaRouter<any, IRetejoContext>();
-		cb(r, controllerResolver);
-		this.koa.use(r.routes()).use(r.allowedMethods());
+	public route(cb: RootRoutingCallback) {
+		const router = createRouter();
+		cb(router, nestRouting, controllerResolver);
+		this.koa
+			.use(router.routes())
+			.use(router.allowedMethods());
 	}
 
 	public listen(host: string, port: number) {
@@ -50,6 +63,17 @@ export class App {
 			}
 		});
 	}
+}
+
+function createRouter(): CRouter {
+	return new KoaRouter<any, IRetejoContext>();
+}
+
+function nestRouting(prefix: string, parentRouter: CRouter, cb: NestRoutingCallback) {
+	const router = createRouter();
+	cb(router);
+	parentRouter
+		.use(prefix, router.routes(), router.allowedMethods());
 }
 
 // tslint:disable-next-line: max-line-length
