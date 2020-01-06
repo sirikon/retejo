@@ -1,39 +1,33 @@
 import Koa from 'koa';
 import KoaRouter from 'koa-router';
-import { container, InjectionToken } from 'tsyringe';
+import { container } from 'tsyringe';
 import { v4 } from 'uuid';
 
 import { Logger } from './Logger';
-import { IRetejoContext, JobContext, RetejoContext } from './models';
+import { IRetejoContext, JobContext } from './models';
+import { Router } from './Router';
 
-type CRouter = KoaRouter<any, IRetejoContext>;
-type CMiddleware = KoaRouter.IMiddleware<any, IRetejoContext>;
-
-type RootRoutingCallback = (route: CRouter, nest: NestRouting, controller: ControllerHandlerResolver) => void;
-type NestRouting = (prefix: string, route: CRouter, cb: NestRoutingCallback) => void;
-type NestRoutingCallback = (router: CRouter) => void;
-
-type Handler = (ctx: RetejoContext) => Promise<void>;
-type HandlerResolver<T> = (controller: T) => Handler;
-type ControllerHandlerResolver = <T>(type: InjectionToken<T>, handlerResolver: HandlerResolver<T>) => Handler;
+type RoutingCallback = (route: Router) => void;
 
 export class App {
 
-	private koa: Koa<any, IRetejoContext>;
+	public static create(): App {
+		return new App(new Koa<any, IRetejoContext>());
+	}
 
-	constructor() {
-		this.koa = new Koa<any, IRetejoContext>();
+	constructor(
+		private readonly koa: Koa<any, IRetejoContext>) {
 		this.useInit();
 		this.useErrorHandling();
 	}
 
-	// tslint:disable-next-line: max-line-length
-	public route(cb: RootRoutingCallback) {
-		const router = createRouter();
-		cb(router, nestRouting, controllerResolver);
+	public route(cb: RoutingCallback) {
+		const koaRouter = new KoaRouter<any, IRetejoContext>();
+		const router = new Router(koaRouter);
+		cb(router);
 		this.koa
-			.use(router.routes())
-			.use(router.allowedMethods());
+			.use(koaRouter.routes())
+			.use(koaRouter.allowedMethods());
 	}
 
 	public listen(host: string, port: number) {
@@ -63,25 +57,6 @@ export class App {
 			}
 		});
 	}
-}
-
-function createRouter(): CRouter {
-	return new KoaRouter<any, IRetejoContext>();
-}
-
-function nestRouting(prefix: string, parentRouter: CRouter, cb: NestRoutingCallback) {
-	const router = createRouter();
-	cb(router);
-	parentRouter
-		.use(prefix, router.routes(), router.allowedMethods());
-}
-
-// tslint:disable-next-line: max-line-length
-function controllerResolver<T>(type: InjectionToken<T>, callback: (c: T) => ((ctx: RetejoContext) => Promise<void>)): (ctx: RetejoContext) => Promise<void> {
-	return async (ctx) => {
-		const controller = ctx.ioc.resolve(type);
-		await callback(controller).call(controller, ctx);
-	};
 }
 
 function getLogger(): Logger {

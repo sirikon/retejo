@@ -8,7 +8,7 @@ export default class HomeController {
 
 	public async handle(ctx: RetejoContext) {
 		const name = ctx.params.name;
-		this.logger.info('Working!', { name });
+		this.logger.info('HomeController -> handle', { name });
 		ctx.body = `Hello ${name}.`;
 	}
 }

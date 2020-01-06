@@ -1,10 +1,12 @@
 import { DefaultContext, DefaultState, ParameterizedContext } from 'koa';
-import { IRouterParamContext } from 'koa-router';
+import KoaRouter, { IRouterParamContext } from 'koa-router';
 import { DependencyContainer } from 'tsyringe';
 
-// interface IRetejoContextExtensor extends DefaultContext {
-// 	ioc: DependencyContainer;
-// }
+export type CRouter = KoaRouter<any, IRetejoContext>;
+
+export type Next = () => Promise<void>;
+export type Handler = (ctx: RetejoContext, next?: Next) => Promise<void>;
+export type HandlerResolver<CtrlT> = (controller: CtrlT) => Handler;
 
 export interface IRetejoContext {
 	params: any;
